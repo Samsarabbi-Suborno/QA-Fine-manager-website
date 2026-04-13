@@ -6,3 +6,4 @@
 4	👤 Fund Holder card	 
 5	📡 Live ticker	Shows remaining dues, auto-updates
 6	🕐 Late Entry tab	Log name/month/date/time, fine auto-added
+https://samsarabbi-suborno.github.io/qa-fine-tracker/

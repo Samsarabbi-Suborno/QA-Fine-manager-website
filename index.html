@@ -365,49 +365,7 @@
     <div id="tab-payments" style="display:none;">
       <div class="section-title">💸 Payment History & Events</div>
       <div id="paymentsList">
-        <!-- Pre-loaded entries -->
-        <div class="payment-item">
-          <div class="pay-info">
-            <div class="pay-title">Tour Sandle — Srimongol 🌿</div>
-            <div class="pay-sub">Ground Zero › Gokart › Coffee Expresso › Chef's Table › Kacchi Bhai · 2022-10-09 · Forhad</div>
-          </div>
-          <div class="pay-amount">৳4,830</div>
-        </div>
-        <div class="payment-item">
-          <div class="pay-info">
-            <div class="pay-title">Team Dinner — The Pan Pacific Lounge, Dhanmondi</div>
-            <div class="pay-sub">Multiple members · 2023-03-12</div>
-          </div>
-          <div class="pay-amount">৳7,500</div>
-        </div>
-        <div class="payment-item">
-          <div class="pay-info">
-            <div class="pay-title">Fine Collection by Tamal</div>
-            <div class="pay-sub">Holder: Tamal · 2025-02-14</div>
-          </div>
-          <div class="pay-amount">৳4,725</div>
-        </div>
-        <div class="payment-item">
-          <div class="pay-info">
-            <div class="pay-title">After CEO Party — Team Lunch (paid from team fund)</div>
-            <div class="pay-sub">Suborno · 2025-08-21</div>
-          </div>
-          <div class="pay-amount">৳4,400</div>
-        </div>
-        <div class="payment-item">
-          <div class="pay-info">
-            <div class="pay-title">Tamal Pizza Party 🍕</div>
-            <div class="pay-sub">Fund · 2025-10-29</div>
-          </div>
-          <div class="pay-amount">৳1,008</div>
-        </div>
-        <div class="payment-item">
-          <div class="pay-info">
-            <div class="pay-title">Toggi Fun World & Dinner</div>
-            <div class="pay-sub">Entry ৳1,200 + Fun ৳4,800 + Food ৳5,811 · Team outing · 2025-12-12</div>
-          </div>
-          <div class="pay-amount">৳11,811</div>
-        </div>
+        <!-- populated by JS -->
       </div>
     </div>
 
@@ -610,6 +568,29 @@
 // ────────────────────────────────────────────
 // DATA — corrected from the sheet
 // ────────────────────────────────────────────
+
+// Pre-loaded payment/event history (always shown at bottom of payments list)
+const DEFAULT_PAYMENTS = [
+  {type:'event',   title:'Tour Sandle — Srimongol 🌿',
+   sub:'Ground Zero › Gokart › Coffee Expresso › Chef\'s Table › Kacchi Bhai · 2022-10-09 · Forhad',
+   amount:4830, date:'2022-10-09'},
+  {type:'event',   title:'Team Dinner — The Pan Pacific Lounge, Dhanmondi',
+   sub:'Multiple members · 2023-03-12',
+   amount:7500, date:'2023-03-12'},
+  {type:'payment', title:'Fine Collection by Tamal',
+   sub:'Holder: Tamal · 2025-02-14',
+   amount:4725, date:'2025-02-14'},
+  {type:'event',   title:'After CEO Party — Team Lunch (paid from team fund)',
+   sub:'Suborno · 2025-08-21',
+   amount:4400, date:'2025-08-21'},
+  {type:'event',   title:'Tamal Pizza Party 🍕',
+   sub:'Fund · 2025-10-29',
+   amount:1008, date:'2025-10-29'},
+  {type:'event',   title:'Toggi Fun World & Dinner',
+   sub:'Entry ৳1,200 + Fun ৳4,800 + Food ৳5,811 · Team outing · 2025-12-12',
+   amount:11811, date:'2025-12-12'},
+];
+
 const MEMBERS = [
   { name:'Forhad',  totalFine:21625, paid:13753, remaining:7872  },
   { name:'Rifat',   totalFine:15665, paid:5078,  remaining:10587 },
@@ -760,7 +741,7 @@ function recordPayment(){
   m.paid+=amt; m.remaining-=amt;
   holder.collected+=amt;
   payments.push({type:'payment',title:`${mem} paid fine`,sub:`Paid to ${h} · ${date}${note?' · '+note:''}`,amount:amt,date});
-  save(); renderAll(); renderPayments();
+  save(); renderAll();
   addLog('payment',`Payment ${fmt(amt)} from ${mem} → ${h}`,date,note);
   showToast(`✅ Payment of ${fmt(amt)} recorded for ${mem}`);
   clearForm('payment');
@@ -776,7 +757,7 @@ function addEvent(){
   if(!name||!date){ showToast('Event name and date required','error'); return; }
   if(cost>0){ holder.spent+=cost; }
   payments.push({type:'event',title:name,sub:`${src} · ${date}${desc?' · '+desc:''}`,amount:cost,date});
-  save(); renderAll(); renderPayments();
+  save(); renderAll();
   addLog('event',`Event: ${name}${cost?` (${fmt(cost)})`:''}`,date,desc);
   showToast(`🎉 Event "${name}" added`);
   clearForm('event');
@@ -805,7 +786,8 @@ function applyAdjust(){
 // ── Payments render ──
 function renderPayments(){
   const container=document.getElementById('paymentsList');
-  const dynamic=payments.slice().reverse().map(p=>`
+  // New dynamic entries shown first (newest first), then the pre-loaded history
+  const dynamicHtml=payments.slice().reverse().map(p=>`
     <div class="payment-item">
       <div class="pay-info">
         <div class="pay-title">${p.title}</div>
@@ -815,10 +797,17 @@ function renderPayments(){
         ${p.amount>0?fmt(p.amount):'—'}
       </div>
     </div>`).join('');
-  // prepend dynamic entries above the static ones
-  const staticItems=container.querySelectorAll('.payment-item');
-  // insert at top
-  container.insertAdjacentHTML('afterbegin',dynamic);
+  const defaultHtml=DEFAULT_PAYMENTS.map(p=>`
+    <div class="payment-item">
+      <div class="pay-info">
+        <div class="pay-title">${p.title}</div>
+        <div class="pay-sub">${p.sub}</div>
+      </div>
+      <div class="pay-amount" style="color:${p.type==='event'?'var(--yellow)':'var(--green)'}">
+        ${p.amount>0?fmt(p.amount):'—'}
+      </div>
+    </div>`).join('');
+  container.innerHTML=dynamicHtml+defaultHtml;
 }
 
 // ── Late Entry ──
@@ -911,7 +900,7 @@ function recordSpend(){
   if(!amt){ showToast('Enter an amount','error'); return; }
   holder.spent+=amt;
   payments.push({type:'event',title:`Spending: ${desc||'(no description)'}`,sub:`Holder: ${holder.name} · ${today()}`,amount:amt,date:today()});
-  save(); renderHolder(); renderPayments();
+  save(); renderAll();
   addLog('event',`Spend ${fmt(amt)} by ${holder.name}`,today(),desc);
   showToast(`💸 Spending of ${fmt(amt)} recorded`);
   document.getElementById('spend-amount').value='';
@@ -960,7 +949,7 @@ function switchInputTab(name,btn){
 
 // ── Render all ──
 function renderAll(){
-  renderStats(); renderTicker(); renderBalance(); renderHolder(); renderLog();
+  renderStats(); renderTicker(); renderBalance(); renderHolder(); renderLog(); renderPayments();
 }
 
 // ── INIT ──

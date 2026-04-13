@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>QA Engineering — Fine Tracker</title>
+<style>
+  :root{
+    --bg:#0a0a0f;--surface:#12121a;--card:#1a1a2e;--accent:#6c63ff;
+    --green:#00d4aa;--red:#ff4757;--yellow:#ffd32a;--blue:#3742fa;
+    --text:#e8e8f0;--sub:#9090aa;--border:#2a2a40;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',sans-serif;min-height:100vh;}
+
+  /* ── HEADER ── */
+  .header{background:linear-gradient(135deg,#1a1a3e,#0d0d1f);padding:24px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+  .header-left h1{font-size:1.7rem;font-weight:800;color:#fff;}
+  .header-left h1 span{color:var(--accent);}
+  .header-left p{color:var(--sub);font-size:.82rem;margin-top:3px;}
+  .meeting-badge{background:rgba(108,99,255,.18);border:1px solid var(--accent);border-radius:10px;padding:10px 18px;text-align:center;font-size:.78rem;color:var(--accent);}
+  .meeting-badge strong{display:block;font-size:.95rem;color:#fff;}
+
+  /* ── LIVE TICKER ── */
+  .ticker-wrap{background:#0d0d1a;border-top:2px solid var(--accent);border-bottom:2px solid var(--accent);padding:8px 0;overflow:hidden;position:relative;}
+  .ticker-inner{display:flex;gap:0;animation:ticker 35s linear infinite;white-space:nowrap;}
+  .ticker-inner:hover{animation-play-state:paused;}
+  .ticker-item{padding:0 40px;font-size:.82rem;color:var(--text);}
+  .ticker-item span{color:var(--red);font-weight:700;}
+  .ticker-label{position:absolute;left:0;top:0;height:100%;padding:0 12px;background:var(--accent);display:flex;align-items:center;font-weight:800;font-size:.75rem;z-index:2;letter-spacing:1px;}
+  @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* ── STATS ROW ── */
+  .stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;padding:24px 32px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;}
+  .stat-card .val{font-size:1.6rem;font-weight:800;color:var(--accent);}
+  .stat-card .lbl{font-size:.72rem;color:var(--sub);margin-top:4px;}
+
+  /* ── MAIN GRID ── */
+  .main-grid{display:grid;grid-template-columns:1fr 340px;gap:20px;padding:0 32px 32px;}
+  @media(max-width:900px){.main-grid{grid-template-columns:1fr;}}
+
+  /* ── TABS ── */
+  .tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+  .tab-btn{padding:9px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;font-size:.82rem;transition:all .2s;}
+  .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  /* ── BALANCE CARDS ── */
+  .balance-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;}
+  .member-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;transition:transform .2s;}
+  .member-card:hover{transform:translateY(-3px);}
+  .member-card .name{font-weight:700;font-size:1rem;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .member-card .name .avatar{width:34px;height:34px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;color:#fff;}
+  .member-card .row{display:flex;justify-content:space-between;font-size:.78rem;margin-top:6px;color:var(--sub);}
+  .member-card .row strong{color:var(--text);}
+  .member-card .remaining{font-size:1.25rem;font-weight:800;color:var(--red);margin-top:10px;}
+  .member-card .remaining.cleared{color:var(--green);}
+  .member-card .progress-bar{height:5px;background:#2a2a3a;border-radius:3px;margin-top:10px;overflow:hidden;}
+  .member-card .progress-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--red),var(--yellow));}
+
+  /* ── ADD FINE PANEL ── */
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px;}
+  .panel-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;cursor:pointer;background:rgba(108,99,255,.1);border-bottom:1px solid var(--border);}
+  .panel-header:hover{background:rgba(108,99,255,.2);}
+  .panel-header h3{font-size:.95rem;color:var(--accent);}
+  .panel-body{padding:18px;display:none;}
+  .panel-body.open{display:block;}
+  .input-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;}
+  .input-tab{padding:7px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--sub);cursor:pointer;font-size:.78rem;}
+  .input-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .form-section{display:none;}
+  .form-section.active{display:block;}
+  .form-group{margin-bottom:12px;}
+  .form-label{display:block;font-size:.78rem;color:var(--sub);margin-bottom:5px;}
+  .form-control{width:100%;padding:9px 12px;background:#0d0d1a;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.85rem;}
+  .form-control:focus{outline:none;border-color:var(--accent);}
+  .btn{padding:9px 20px;border-radius:8px;border:none;cursor:pointer;font-size:.83rem;font-weight:600;transition:all .2s;}
+  .btn-primary{background:var(--accent);color:#fff;}
+  .btn-primary:hover{background:#5a52e0;}
+  .btn-success{background:var(--green);color:#000;}
+  .btn-success:hover{background:#00b894;}
+  .btn-outline{background:transparent;border:1px solid var(--border);color:var(--sub);}
+  .btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-row{display:flex;gap:8px;margin-top:4px;}
+
+  /* ── LOG ── */
+  .log-item{background:#0d0d1a;border-radius:8px;padding:10px 13px;margin-bottom:8px;border-left:3px solid var(--accent);font-size:.8rem;}
+  .log-item.fine{border-color:var(--red);}
+  .log-item.payment{border-color:var(--green);}
+  .log-item.event{border-color:var(--yellow);}
+  .log-item.adjust{border-color:var(--blue);}
+  .log-time{color:var(--sub);font-size:.72rem;margin-top:3px;}
+
+  /* ── PAYMENTS TAB ── */
+  .payment-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+  .payment-item .pay-info{font-size:.85rem;}
+  .payment-item .pay-info .pay-title{font-weight:700;margin-bottom:3px;}
+  .payment-item .pay-info .pay-sub{color:var(--sub);font-size:.78rem;}
+  .payment-item .pay-amount{font-size:1.1rem;font-weight:800;color:var(--green);}
+
+  /* ── FUND HOLDER CARD ── */
+  .holder-card{background:linear-gradient(135deg,#1a1a3e,#12122a);border:2px solid var(--accent);border-radius:16px;padding:22px;margin-bottom:20px;}
+  .holder-card h3{color:var(--accent);font-size:.85rem;letter-spacing:1px;margin-bottom:14px;text-transform:uppercase;}
+  .holder-card .holder-name{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:12px;}
+  .holder-card .holder-row{display:flex;justify-content:space-between;font-size:.82rem;color:var(--sub);margin-top:8px;}
+  .holder-card .holder-row strong{color:var(--text);}
+  .holder-card .balance-big{font-size:2rem;font-weight:800;color:var(--green);margin:10px 0;}
+  .holder-card .spend-form{margin-top:14px;padding-top:14px;border-top:1px solid var(--border);}
+
+  /* ── FINE RULES ── */
+  .rule-item{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:.82rem;}
+  .rule-item:last-child{border-bottom:none;}
+  .rule-item .rule-amt{color:var(--yellow);font-weight:700;}
+
+  /* ── POLICIES ── */
+  .policy-block{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;font-size:.82rem;}
+  .policy-block h4{color:var(--accent);margin-bottom:8px;}
+  .policy-table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.8rem;}
+  .policy-table th,.policy-table td{padding:7px 10px;border:1px solid var(--border);text-align:center;}
+  .policy-table th{background:#1a1a2e;color:var(--accent);}
+
+  /* ── LATE ENTRY TAB ── */
+  .late-entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media(max-width:700px){.late-entry-grid{grid-template-columns:1fr;}}
+  .late-log-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
+  .late-log-item .info{font-size:.83rem;}
+  .late-log-item .info .lname{font-weight:700;}
+  .late-log-item .info .lsub{color:var(--sub);font-size:.76rem;margin-top:2px;}
+  .late-log-item .fine-badge{background:rgba(255,71,87,.15);color:var(--red);border:1px solid var(--red);border-radius:6px;padding:4px 10px;font-size:.78rem;font-weight:700;}
+  .section-title{font-size:1rem;font-weight:700;margin-bottom:14px;color:var(--text);}
+  .badge{padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;}
+  .badge-red{background:rgba(255,71,87,.15);color:var(--red);}
+  .badge-green{background:rgba(0,212,170,.15);color:var(--green);}
+
+  /* ── TREASURY SIDEBAR ── */
+  .treasury{background:linear-gradient(135deg,#1a1a3e,#0d0d1f);border:1px solid var(--accent);border-radius:14px;padding:20px;margin-bottom:20px;}
+  .treasury h3{color:var(--accent);font-size:.82rem;letter-spacing:1px;margin-bottom:14px;text-transform:uppercase;}
+  .treasury-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.83rem;}
+  .treasury-row:last-child{border-bottom:none;}
+  .treasury-row .t-val{font-weight:800;font-size:1rem;}
+
+  /* ── TOAST ── */
+  #toast{position:fixed;bottom:28px;right:28px;background:var(--card);border:1px solid var(--accent);border-radius:10px;padding:14px 20px;font-size:.85rem;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;max-width:300px;}
+  #toast.show{transform:translateY(0);opacity:1;}
+  #toast.success{border-color:var(--green);color:var(--green);}
+  #toast.error{border-color:var(--red);color:var(--red);}
+
+  /* ── FOOTER ── */
+  footer{text-align:center;padding:20px;color:var(--sub);font-size:.78rem;border-top:1px solid var(--border);}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<div class="header">
+  <div class="header-left">
+    <h1>⚡ QA Engineering <span>Fine Tracker</span></h1>
+    <p>Accountability · Transparency · Excellence</p>
+  </div>
+  <div class="meeting-badge">
+    📅 WING MEETING<br>
+    <strong>Every Month — 1st Thursday</strong>
+    3:00 PM
+  </div>
+</div>
+
+<!-- ═══════════════ LIVE TICKER ═══════════════ -->
+<div class="ticker-wrap">
+  <div class="ticker-label">LIVE</div>
+  <div class="ticker-inner" id="tickerInner">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+<!-- ═══════════════ STATS ROW ═══════════════ -->
+<div class="stats-row" id="statsRow">
+  <!-- populated by JS -->
+</div>
+
+<!-- ════════════���══ MAIN GRID ═══════════════ -->
+<div class="main-grid">
+
+  <!-- LEFT COLUMN -->
+  <div>
+    <!-- Input System Panel -->
+    <div class="panel" id="inputPanel">
+      <div class="panel-header" onclick="togglePanel()">
+        <h3>➕ Input System</h3>
+        <span id="panelArrow">▼</span>
+      </div>
+      <div class="panel-body" id="panelBody">
+        <div class="input-tabs">
+          <button class="input-tab active" onclick="switchInputTab('fine',this)">💸 Add Fine</button>
+          <button class="input-tab" onclick="switchInputTab('payment',this)">✅ Record Payment</button>
+          <button class="input-tab" onclick="switchInputTab('event',this)">🎉 Add Event</button>
+          <button class="input-tab" onclick="switchInputTab('adjust',this)">⚖️ Adjust Balance</button>
+        </div>
+
+        <!-- Add Fine -->
+        <div class="form-section active" id="fs-fine">
+          <div class="form-group">
+            <label class="form-label">Member *</label>
+            <select class="form-control" id="f-member">
+              <option value="">— Select Member —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (BDT) *</label>
+            <input type="number" class="form-control" id="f-amount" placeholder="e.g. 200">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category *</label>
+            <select class="form-control" id="f-cat">
+              <option value="">— Select Category —</option>
+              <option>DSM Late Join</option><option>DSM Missing</option>
+              <option>Task Sheet Not Updated (3 Days)</option>
+              <option>Using Slang Inside Room</option><option>Basic Test Missing</option>
+              <option>Missing Retro Meeting</option><option>Not Inform Team for Leave</option>
+              <option>Not Inform Team for Home Office</option>
+              <option>Missing Time Entry (WFO)</option><option>Missing Time Entry (WFH)</option>
+              <option>Sprint Task Incomplete</option><option>Washroom Sandle / Gate</option>
+              <option>Leave Not Applied on Time</option><option>Time Entry 10 Min Rule</option>
+              <option>Antorikota Fine</option><option>Out of Desk WFH</option>
+              <option>CTO Meeting Late Join</option><option>PP Fine</option>
+              <option>Joining Party</option><option>Increment Party</option><option>Custom</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date *</label>
+            <input type="date" class="form-control" id="f-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Note / Reason</label>
+            <input type="text" class="form-control" id="f-note" placeholder="Optional note">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="addFine()">⚡ Add Fine</button>
+            <button class="btn btn-outline" onclick="clearForm('fine')">Clear</button>
+          </div>
+        </div>
+
+        <!-- Record Payment -->
+        <div class="form-section" id="fs-payment">
+          <div class="form-group">
+            <label class="form-label">Member *</label>
+            <select class="form-control" id="p-member">
+              <option value="">— Select Member —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount Paid (BDT) *</label>
+            <input type="number" class="form-control" id="p-amount" placeholder="e.g. 500">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Paid To (Holder)</label>
+            <input type="text" class="form-control" id="p-holder" placeholder="e.g. Forhad">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date *</label>
+            <input type="date" class="form-control" id="p-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Note</label>
+            <input type="text" class="form-control" id="p-note" placeholder="Optional">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-success" onclick="recordPayment()">✅ Record Payment</button>
+            <button class="btn btn-outline" onclick="clearForm('payment')">Clear</button>
+          </div>
+        </div>
+
+        <!-- Add Event -->
+        <div class="form-section" id="fs-event">
+          <div class="form-group">
+            <label class="form-label">Event Name *</label>
+            <input type="text" class="form-control" id="e-name" placeholder="e.g. Team Dinner">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Total Cost (BDT)</label>
+            <input type="number" class="form-control" id="e-cost" placeholder="e.g. 4000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date *</label>
+            <input type="date" class="form-control" id="e-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fund Source</label>
+            <select class="form-control" id="e-source">
+              <option>Team Fund</option><option>Fine Fund</option>
+              <option>Individual Contribution</option><option>Mixed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <input type="text" class="form-control" id="e-desc" placeholder="Details...">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="addEvent()">🎉 Add Event</button>
+            <button class="btn btn-outline" onclick="clearForm('event')">Clear</button>
+          </div>
+        </div>
+
+        <!-- Adjust Balance -->
+        <div class="form-section" id="fs-adjust">
+          <p style="font-size:.8rem;color:var(--sub);margin-bottom:12px;">Manually correct a balance — for disputes resolved, fines waived, or data corrections.</p>
+          <div class="form-group">
+            <label class="form-label">Member *</label>
+            <select class="form-control" id="a-member">
+              <option value="">— Select Member —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Adjustment Type</label>
+            <select class="form-control" id="a-type">
+              <option value="set">Set Remaining Balance To</option>
+              <option value="reduce">Reduce Balance By</option>
+              <option value="increase">Increase Balance By</option>
+              <option value="waive">Waive All (Set to 0)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Amount (BDT)</label>
+            <input type="number" class="form-control" id="a-amount" placeholder="Leave blank for Waive All">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" id="a-date">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reason * (required)</label>
+            <input type="text" class="form-control" id="a-reason" placeholder="Mandatory reason">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="applyAdjust()">⚖️ Apply Adjustment</button>
+            <button class="btn btn-outline" onclick="clearForm('adjust')">Clear</button>
+          </div>
+        </div>
+
+        <!-- Recent Log -->
+        <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:.82rem;font-weight:700;color:var(--sub);">📋 Recent Entries Log</span>
+            <button class="btn btn-outline" style="padding:4px 10px;font-size:.72rem;" onclick="clearLog()">Clear All</button>
+          </div>
+          <div id="recentLog"><p style="color:var(--sub);font-size:.8rem;">No entries yet.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('balance',this)">💰 Remaining Balance</button>
+      <button class="tab-btn" onclick="switchTab('payments',this)">💸 Payments</button>
+      <button class="tab-btn" onclick="switchTab('rules',this)">📋 Fine Rules</button>
+      <button class="tab-btn" onclick="switchTab('late',this)">🕐 Late Entry</button>
+      <button class="tab-btn" onclick="switchTab('policies',this)">📜 Policies</button>
+    </div>
+
+    <!-- TAB: REMAINING BALANCE -->
+    <div id="tab-balance">
+      <div class="balance-grid" id="balanceGrid"></div>
+    </div>
+
+    <!-- TAB: PAYMENTS -->
+    <div id="tab-payments" style="display:none;">
+      <div class="section-title">💸 Payment History & Events</div>
+      <div id="paymentsList">
+        <!-- Pre-loaded entries -->
+        <div class="payment-item">
+          <div class="pay-info">
+            <div class="pay-title">Tour Sandle — Srimongol 🌿</div>
+            <div class="pay-sub">Ground Zero › Gokart › Coffee Expresso › Chef's Table › Kacchi Bhai · 2022-10-09 · Forhad</div>
+          </div>
+          <div class="pay-amount">৳4,830</div>
+        </div>
+        <div class="payment-item">
+          <div class="pay-info">
+            <div class="pay-title">Team Dinner — The Pan Pacific Lounge, Dhanmondi</div>
+            <div class="pay-sub">Multiple members · 2023-03-12</div>
+          </div>
+          <div class="pay-amount">৳7,500</div>
+        </div>
+        <div class="payment-item">
+          <div class="pay-info">
+            <div class="pay-title">Fine Collection by Tamal</div>
+            <div class="pay-sub">Holder: Tamal · 2025-02-14</div>
+          </div>
+          <div class="pay-amount">৳4,725</div>
+        </div>
+        <div class="payment-item">
+          <div class="pay-info">
+            <div class="pay-title">After CEO Party — Team Lunch (paid from team fund)</div>
+            <div class="pay-sub">Suborno · 2025-08-21</div>
+          </div>
+          <div class="pay-amount">৳4,400</div>
+        </div>
+        <div class="payment-item">
+          <div class="pay-info">
+            <div class="pay-title">Tamal Pizza Party 🍕</div>
+            <div class="pay-sub">Fund · 2025-10-29</div>
+          </div>
+          <div class="pay-amount">৳1,008</div>
+        </div>
+        <div class="payment-item">
+          <div class="pay-info">
+            <div class="pay-title">Toggi Fun World & Dinner</div>
+            <div class="pay-sub">Entry ৳1,200 + Fun ৳4,800 + Food ৳5,811 · Team outing · 2025-12-12</div>
+          </div>
+          <div class="pay-amount">৳11,811</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: FINE RULES -->
+    <div id="tab-rules" style="display:none;">
+      <div class="section-title">📋 Fine Rules & Amounts <span class="badge badge-red">OFFICIAL</span></div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div class="rule-item"><span>Time Entry — 10 Min Rule (Flexible)</span><span class="rule-amt">৳50</span></div>
+        <div class="rule-item"><span>Daily Scrum Late / Not Join (2nd occurrence)</span><span class="rule-amt">৳200</span></div>
+        <div class="rule-item"><span>Daily Scrum Late / Not Join (4th day)</span><span class="rule-amt">৳200</span></div>
+        <div class="rule-item"><span>Washroom gate — entering without sandle / not closing</span><span class="rule-amt">৳50</span></div>
+        <div class="rule-item"><span>Missing Retro Meeting</span><span class="rule-amt">৳200</span></div>
+        <div class="rule-item"><span>Basic Test Missing</span><span class="rule-amt">৳500</span></div>
+        <div class="rule-item"><span>Using Slang Inside Room</span><span class="rule-amt">৳300</span></div>
+        <div class="rule-item"><span>Not Informing Team (QA & PL) to Take Leave</span><span class="rule-amt">৳300</span></div>
+        <div class="rule-item"><span>Not Informing Team to Take Home Office</span><span class="rule-amt">৳150</span></div>
+        <div class="rule-item"><span>QA Team Joining Party — Intern</span><span class="rule-amt">৳1,000</span></div>
+        <div class="rule-item"><span>QA Team Joining Party — Fresher</span><span class="rule-amt">৳1,500</span></div>
+        <div class="rule-item"><span>QA Team Joining Party — Non-Fresher</span><span class="rule-amt">৳2,000</span></div>
+        <div class="rule-item"><span>Parallel DS Late / Missed (3 times)</span><span class="rule-amt">৳300</span></div>
+        <div class="rule-item"><span>Task Sheet Not Updated for Last 3 Days</span><span class="rule-amt">৳100</span></div>
+        <div class="rule-item"><span>Team Lead Fine</span><span class="rule-amt">৳300</span></div>
+        <div class="rule-item"><span>Sprint Task Incomplete / Delays / Awareness (2nd)</span><span class="rule-amt">৳300</span></div>
+        <div class="rule-item"><span>Missing Time Entry (WFO / WFH same day)</span><span class="rule-amt">৳200</span></div>
+        <div class="rule-item"><span>Leave not applied on due time (from 3rd day)</span><span class="rule-amt">৳300</span></div>
+        <div class="rule-item"><span>Antorikota Fine (Group Call)</span><span class="rule-amt">৳50</span></div>
+        <div class="rule-item"><span>Out of Desk on WFH (20 min)</span><span class="rule-amt">৳100</span></div>
+        <div class="rule-item"><span>CTO Team Meeting — Late Join</span><span class="rule-amt">৳1,000</span></div>
+        <div class="rule-item"><span>CTO Team Meeting — Awareness</span><span class="rule-amt">৳500</span></div>
+      </div>
+    </div>
+
+    <!-- TAB: LATE ENTRY -->
+    <div id="tab-late" style="display:none;">
+      <div class="late-entry-grid">
+        <!-- Form -->
+        <div>
+          <div class="section-title">🕐 Log Late Office Entry (After 11:30 AM)</div>
+          <div class="panel" style="margin-bottom:0;">
+            <div style="padding:18px;">
+              <div class="form-group">
+                <label class="form-label">Member Name *</label>
+                <select class="form-control" id="l-member">
+                  <option value="">— Select Member —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Month *</label>
+                <select class="form-control" id="l-month">
+                  <option value="">— Select Month —</option>
+                  <option>January</option><option>February</option><option>March</option>
+                  <option>April</option><option>May</option><option>June</option>
+                  <option>July</option><option>August</option><option>September</option>
+                  <option>October</option><option>November</option><option>December</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Date *</label>
+                <input type="date" class="form-control" id="l-date">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Arrival Time</label>
+                <input type="time" class="form-control" id="l-time" value="11:45">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fine Amount (BDT)</label>
+                <input type="number" class="form-control" id="l-fine" value="200" placeholder="Default: 200">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Notified Collaboration Group?</label>
+                <select class="form-control" id="l-notified">
+                  <option value="yes">✅ Yes — Notified</option>
+                  <option value="no">❌ No — Not Notified</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Administrator</label>
+                <input type="text" class="form-control" id="l-admin" placeholder="Who counted/noted it">
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" onclick="addLateEntry()">🕐 Log Entry</button>
+                <button class="btn btn-outline" onclick="clearLateForm()">Clear</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log -->
+        <div>
+          <div class="section-title">📋 Late Entry Log</div>
+          <div style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <select class="form-control" id="l-filter-month" onchange="renderLateLog()" style="width:auto;font-size:.78rem;padding:6px 10px;">
+              <option value="">All Months</option>
+              <option>January</option><option>February</option><option>March</option>
+              <option>April</option><option>May</option><option>June</option>
+              <option>July</option><option>August</option><option>September</option>
+              <option>October</option><option>November</option><option>December</option>
+            </select>
+            <select class="form-control" id="l-filter-member" onchange="renderLateLog()" style="width:auto;font-size:.78rem;padding:6px 10px;">
+              <option value="">All Members</option>
+            </select>
+          </div>
+          <div id="lateLogList"><p style="color:var(--sub);font-size:.8rem;">No late entries logged yet.</p></div>
+          <div id="lateSummary" style="margin-top:14px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: POLICIES -->
+    <div id="tab-policies" style="display:none;">
+      <div class="section-title">📜 Policies & Announcements <span class="badge badge-red">OFFICIAL</span></div>
+      <div class="policy-block">
+        <h4>📅 Daily Scrum Rules</h4>
+        <p>Late DSM: <strong>3×/month WFO</strong>, <strong>1×/month WFH</strong>. Fine: <strong>৳200 / ৳200 (4th day) / ৳200 (2nd day WFH)</strong></p>
+      </div>
+      <div class="policy-block">
+        <h4>���� Installment Option</h4>
+        <p>Members with significant fines may arrange installment payment plans with the fine holder.</p>
+      </div>
+      <div class="policy-block">
+        <h4>📋 Leave Application Policy</h4>
+        <p>Apply leave on time. From 3rd day late: <strong>৳300 fine</strong>. Emergencies considered.</p>
+      </div>
+      <div class="policy-block">
+        <h4>📊 Demerit Points (Jan 2026)</h4>
+        <table class="policy-table">
+          <tr><th>Name</th><th>Late (Home)</th><th>Late (Office)</th></tr>
+          <tr><td>Shuvo (QA)</td><td>0</td><td>0</td></tr>
+          <tr><td>Shilon</td><td>0</td><td>1</td></tr>
+          <tr><td>Tamal</td><td>0</td><td>2</td></tr>
+          <tr><td>Suborno</td><td>0</td><td>1</td></tr>
+          <tr><td>Forhad</td><td>0</td><td>—</td></tr>
+          <tr><td>Rifat</td><td>0</td><td>1</td></tr>
+          <tr><td>Mejba</td><td>0</td><td>2</td></tr>
+          <tr><td>Tanvir</td><td>0</td><td>1</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT COLUMN: SIDEBAR -->
+  <div>
+    <!-- Fund Holder Card -->
+    <div class="holder-card">
+      <h3>💼 Fund Holder</h3>
+      <div class="holder-name" id="holderName">Forhad</div>
+      <div style="color:var(--sub);font-size:.8rem;">Cash in Hand (Remaining after spending):</div>
+      <div class="balance-big" id="holderBalance">৳2,708</div>
+      <div class="holder-row"><span>Total Collected</span><strong id="holderCollected">৳54,823</strong></div>
+      <div class="holder-row"><span>Total Spent</span><strong id="holderSpent">৳52,115</strong></div>
+      <!-- Spend Form -->
+      <div class="spend-form">
+        <div style="font-size:.78rem;color:var(--sub);margin-bottom:10px;font-weight:700;">💸 Record Spending</div>
+        <div class="form-group">
+          <input type="number" class="form-control" id="spend-amount" placeholder="Amount spent (BDT)">
+        </div>
+        <div class="form-group">
+          <input type="text" class="form-control" id="spend-desc" placeholder="What was it spent on?">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" style="font-size:.78rem;padding:7px 14px;" onclick="recordSpend()">Record Spend</button>
+        </div>
+      </div>
+      <!-- Change Holder -->
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:.78rem;color:var(--sub);margin-bottom:8px;font-weight:700;">🔄 Change Holder</div>
+        <div style="display:flex;gap:8px;">
+          <input type="text" class="form-control" id="new-holder" placeholder="New holder name" style="font-size:.8rem;">
+          <button class="btn btn-outline" style="font-size:.75rem;padding:7px 12px;white-space:nowrap;" onclick="changeHolder()">Update</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Treasury Summary -->
+    <div class="treasury">
+      <h3>🏦 Treasury</h3>
+      <div class="treasury-row"><span>🔴 Outstanding</span><strong class="t-val" style="color:var(--red);" id="s-outstanding">৳41,060</strong></div>
+      <div class="treasury-row"><span>✅ Collected</span><strong class="t-val" style="color:var(--green);" id="s-collected">৳54,823</strong></div>
+      <div class="treasury-row"><span>💰 Holder Savings</span><strong class="t-val" style="color:var(--yellow);" id="s-saved">৳2,708</strong></div>
+      <div class="treasury-row"><span>👥 Active Members</span><strong class="t-val">8</strong></div>
+    </div>
+
+    <!-- Quick Late Entry Summary -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;">
+      <div style="font-size:.82rem;font-weight:700;color:var(--accent);margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;">🕐 This Month's Late Entries</div>
+      <div id="sidebarLate"><p style="color:var(--sub);font-size:.78rem;">No late entries this month.</p></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- FOOTER -->
+<footer>QA Engineering Team — Fine Tracker &nbsp;·&nbsp; Wing Meeting: Every Month, 1st Thursday @ 3:00 PM</footer>
+
+<!-- ═══════════════ JAVASCRIPT ═══════════════ -->
+<script>
+// ────────────────────────────────────────────
+// DATA — corrected from the sheet
+// ────────────────────────────────────────────
+const MEMBERS = [
+  { name:'Forhad',  totalFine:21625, paid:13753, remaining:7872  },
+  { name:'Rifat',   totalFine:15665, paid:5078,  remaining:10587 },
+  { name:'Tamal',   totalFine:7800,  paid:2500,  remaining:5300  },
+  { name:'Tanvir',  totalFine:4100,  paid:1500,  remaining:2600  },
+  { name:'Suborno', totalFine:8725,  paid:6850,  remaining:1875  },
+  { name:'Mejba',   totalFine:11275, paid:3794,  remaining:7481  },
+  { name:'Shilon',  totalFine:12276, paid:5468,  remaining:6808  },
+  { name:'Shuvo',   totalFine:21366, paid:18566, remaining:2800  },
+];
+
+let members  = JSON.parse(localStorage.getItem('qa_members'))  || MEMBERS.map(m=>({...m}));
+let log      = JSON.parse(localStorage.getItem('qa_log'))      || [];
+let payments = JSON.parse(localStorage.getItem('qa_payments')) || [];
+let lateLog  = JSON.parse(localStorage.getItem('qa_late'))     || [];
+let holder   = JSON.parse(localStorage.getItem('qa_holder'))   || { name:'Forhad', collected:54823, spent:52115 };
+
+function save(){
+  localStorage.setItem('qa_members',  JSON.stringify(members));
+  localStorage.setItem('qa_log',      JSON.stringify(log));
+  localStorage.setItem('qa_payments', JSON.stringify(payments));
+  localStorage.setItem('qa_late',     JSON.stringify(lateLog));
+  localStorage.setItem('qa_holder',   JSON.stringify(holder));
+}
+
+// ── Helpers ──
+function fmt(n){ return '৳'+Number(n).toLocaleString('en-IN'); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+function initDate(id){ document.getElementById(id).value=today(); }
+function showToast(msg,type='success'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show '+(type==='error'?'error':'success');
+  setTimeout(()=>t.className='',3000);
+}
+function avatar(name){ return name.charAt(0).toUpperCase(); }
+function colors(i){ const c=['#6c63ff','#00d4aa','#ffd32a','#ff4757','#3742fa','#ff6b81','#2ed573','#eccc68']; return c[i%c.length]; }
+
+// ── Populate member dropdowns ──
+function populateSelects(){
+  const ids=['f-member','p-member','a-member','l-member','l-filter-member'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    const cur=el.value;
+    // keep first option, remove rest
+    while(el.options.length>1) el.remove(1);
+    members.forEach(m=>{
+      const o=document.createElement('option');
+      o.value=m.name; o.textContent=m.name;
+      el.appendChild(o);
+    });
+    if(cur) el.value=cur;
+  });
+}
+
+// ── Stats Row ──
+function renderStats(){
+  const outstanding = members.reduce((s,m)=>s+m.remaining,0);
+  const collected   = members.reduce((s,m)=>s+m.paid,0);
+  const totalFine   = members.reduce((s,m)=>s+m.totalFine,0);
+  const cleared     = members.filter(m=>m.remaining<=0).length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-card"><div class="val">${fmt(totalFine)}</div><div class="lbl">Total Fines Issued</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--red)">${fmt(outstanding)}</div><div class="lbl">Currently Outstanding</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--green)">${fmt(collected)}</div><div class="lbl">Total Paid</div></div>
+    <div class="stat-card"><div class="val">8</div><div class="lbl">Active Members</div></div>
+    <div class="stat-card"><div class="val" style="color:var(--yellow)">${fmt(holder.collected-holder.spent)}</div><div class="lbl">Fund Balance (${holder.name})</div></div>
+  `;
+  document.getElementById('s-outstanding').textContent=fmt(outstanding);
+  document.getElementById('s-collected').textContent=fmt(collected);
+  document.getElementById('s-saved').textContent=fmt(holder.collected-holder.spent);
+}
+
+// ── Ticker ──
+function renderTicker(){
+  const items=members.map(m=>`<span class="ticker-item">🔴 <strong>${m.name}</strong> owes <span>${fmt(m.remaining)}</span></span>`);
+  const doubled=items.join('')+items.join('');
+  document.getElementById('tickerInner').innerHTML=doubled;
+}
+
+// ── Balance Grid ──
+function renderBalance(){
+  const sorted=[...members].sort((a,b)=>b.remaining-a.remaining);
+  document.getElementById('balanceGrid').innerHTML=sorted.map((m,i)=>{
+    const pct = m.totalFine>0 ? Math.round((m.paid/m.totalFine)*100) : 100;
+    const cleared = m.remaining<=0;
+    return `
+    <div class="member-card">
+      <div class="name">
+        <div class="avatar" style="background:${colors(i)}">${avatar(m.name)}</div>
+        ${m.name}
+        ${cleared?'<span class="badge badge-green" style="margin-left:auto">✅ CLEARED</span>':''}
+      </div>
+      <div class="row"><span>Total Fine</span><strong>${fmt(m.totalFine)}</strong></div>
+      <div class="row"><span>Paid</span><strong style="color:var(--green)">${fmt(m.paid)}</strong></div>
+      <div class="${'remaining'+(cleared?' cleared':'')}">${fmt(m.remaining)}</div>
+      <div style="font-size:.72rem;color:var(--sub);margin-top:-4px;">${cleared?'Fully paid ✅':`Remaining to pay`}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div style="font-size:.72rem;color:var(--sub);margin-top:4px;text-align:right">${pct}% paid</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Log ──
+function renderLog(){
+  const el=document.getElementById('recentLog');
+  if(!log.length){ el.innerHTML='<p style="color:var(--sub);font-size:.8rem;">No entries yet.</p>'; return; }
+  el.innerHTML=log.slice().reverse().slice(0,20).map(e=>`
+    <div class="log-item ${e.type}">
+      <strong>${e.label}</strong>
+      <div class="log-time">${e.date} ${e.note?'· '+e.note:''}</div>
+    </div>`).join('');
+}
+
+function addLog(type,label,date,note){
+  log.push({type,label,date:date||today(),note:note||''});
+  save(); renderLog();
+}
+
+function clearLog(){ log=[]; save(); renderLog(); }
+
+// ── Add Fine ──
+function addFine(){
+  const mem=document.getElementById('f-member').value;
+  const amt=parseFloat(document.getElementById('f-amount').value);
+  const cat=document.getElementById('f-cat').value;
+  const date=document.getElementById('f-date').value;
+  const note=document.getElementById('f-note').value;
+  if(!mem||!amt||!cat||!date){ showToast('Please fill all required fields','error'); return; }
+  const m=members.find(x=>x.name===mem);
+  m.totalFine+=amt; m.remaining+=amt;
+  save(); renderAll();
+  addLog('fine',`Fine +${fmt(amt)} → ${mem} [${cat}]`,date,note);
+  showToast(`✅ Fine of ${fmt(amt)} added to ${mem}`);
+  clearForm('fine');
+}
+
+// ── Record Payment ──
+function recordPayment(){
+  const mem=document.getElementById('p-member').value;
+  const amt=parseFloat(document.getElementById('p-amount').value);
+  const h=document.getElementById('p-holder').value||holder.name;
+  const date=document.getElementById('p-date').value;
+  const note=document.getElementById('p-note').value;
+  if(!mem||!amt||!date){ showToast('Please fill all required fields','error'); return; }
+  const m=members.find(x=>x.name===mem);
+  if(amt>m.remaining){ showToast(`⚠️ Amount exceeds remaining balance (${fmt(m.remaining)})`,'error'); return; }
+  m.paid+=amt; m.remaining-=amt;
+  holder.collected+=amt;
+  payments.push({type:'payment',title:`${mem} paid fine`,sub:`Paid to ${h} · ${date}${note?' · '+note:''}`,amount:amt,date});
+  save(); renderAll(); renderPayments();
+  addLog('payment',`Payment ${fmt(amt)} from ${mem} → ${h}`,date,note);
+  showToast(`✅ Payment of ${fmt(amt)} recorded for ${mem}`);
+  clearForm('payment');
+}
+
+// ── Add Event ──
+function addEvent(){
+  const name=document.getElementById('e-name').value;
+  const cost=parseFloat(document.getElementById('e-cost').value)||0;
+  const date=document.getElementById('e-date').value;
+  const src=document.getElementById('e-source').value;
+  const desc=document.getElementById('e-desc').value;
+  if(!name||!date){ showToast('Event name and date required','error'); return; }
+  if(cost>0){ holder.spent+=cost; }
+  payments.push({type:'event',title:name,sub:`${src} · ${date}${desc?' · '+desc:''}`,amount:cost,date});
+  save(); renderAll(); renderPayments();
+  addLog('event',`Event: ${name}${cost?` (${fmt(cost)})`:''}`,date,desc);
+  showToast(`🎉 Event "${name}" added`);
+  clearForm('event');
+}
+
+// ── Adjust Balance ──
+function applyAdjust(){
+  const mem=document.getElementById('a-member').value;
+  const type=document.getElementById('a-type').value;
+  const amt=parseFloat(document.getElementById('a-amount').value)||0;
+  const date=document.getElementById('a-date').value;
+  const reason=document.getElementById('a-reason').value;
+  if(!mem||!reason){ showToast('Member and reason are required','error'); return; }
+  const m=members.find(x=>x.name===mem);
+  let desc='';
+  if(type==='set'){ m.remaining=amt; desc=`Set to ${fmt(amt)}`; }
+  else if(type==='reduce'){ m.remaining=Math.max(0,m.remaining-amt); m.paid+=amt; desc=`Reduced by ${fmt(amt)}`; }
+  else if(type==='increase'){ m.remaining+=amt; m.totalFine+=amt; desc=`Increased by ${fmt(amt)}`; }
+  else if(type==='waive'){ m.remaining=0; desc='All waived'; }
+  save(); renderAll();
+  addLog('adjust',`Adjust ${mem}: ${desc}`,date||today(),reason);
+  showToast(`⚖️ Balance adjusted for ${mem}: ${desc}`);
+  clearForm('adjust');
+}
+
+// ── Payments render ──
+function renderPayments(){
+  const container=document.getElementById('paymentsList');
+  const dynamic=payments.slice().reverse().map(p=>`
+    <div class="payment-item">
+      <div class="pay-info">
+        <div class="pay-title">${p.title}</div>
+        <div class="pay-sub">${p.sub}</div>
+      </div>
+      <div class="pay-amount" style="color:${p.type==='event'?'var(--yellow)':'var(--green)'}">
+        ${p.amount>0?fmt(p.amount):'—'}
+      </div>
+    </div>`).join('');
+  // prepend dynamic entries above the static ones
+  const staticItems=container.querySelectorAll('.payment-item');
+  // insert at top
+  container.insertAdjacentHTML('afterbegin',dynamic);
+}
+
+// ── Late Entry ──
+function addLateEntry(){
+  const mem=document.getElementById('l-member').value;
+  const month=document.getElementById('l-month').value;
+  const date=document.getElementById('l-date').value;
+  const time=document.getElementById('l-time').value||'?';
+  const fine=parseFloat(document.getElementById('l-fine').value)||200;
+  const notified=document.getElementById('l-notified').value;
+  const admin=document.getElementById('l-admin').value;
+  if(!mem||!month||!date){ showToast('Member, month and date are required','error'); return; }
+  lateLog.push({mem,month,date,time,fine,notified,admin});
+  // also add fine to member
+  const m=members.find(x=>x.name===mem);
+  if(m){ m.totalFine+=fine; m.remaining+=fine; }
+  save(); renderAll(); renderLateLog();
+  addLog('fine',`Late Entry: ${mem} arrived at ${time} (${month})`,date,admin?`Admin: ${admin}`:'');
+  showToast(`🕐 Late entry logged for ${mem} — ${fmt(fine)} fine added`);
+  clearLateForm();
+}
+
+function clearLateForm(){
+  ['l-member','l-month','l-date','l-admin'].forEach(id=>{ const e=document.getElementById(id); if(e)e.value=''; });
+  document.getElementById('l-time').value='11:45';
+  document.getElementById('l-fine').value='200';
+  document.getElementById('l-notified').value='yes';
+}
+
+function renderLateLog(){
+  const filterMonth=document.getElementById('l-filter-month').value;
+  const filterMem=document.getElementById('l-filter-member').value;
+  let data=lateLog;
+  if(filterMonth) data=data.filter(e=>e.month===filterMonth);
+  if(filterMem)   data=data.filter(e=>e.mem===filterMem);
+  const el=document.getElementById('lateLogList');
+  if(!data.length){ el.innerHTML='<p style="color:var(--sub);font-size:.8rem;">No late entries match the filter.</p>'; }
+  else{
+    el.innerHTML=data.slice().reverse().map(e=>`
+      <div class="late-log-item">
+        <div class="info">
+          <div class="lname">${e.mem}</div>
+          <div class="lsub">${e.month} · ${e.date} · Arrived ${e.time} ${e.admin?'· Admin: '+e.admin:''}</div>
+          <div class="lsub" style="margin-top:2px;">${e.notified==='yes'?'✅ Notified group':'❌ Not notified'}</div>
+        </div>
+        <div class="fine-badge">${fmt(e.fine)}</div>
+      </div>`).join('');
+  }
+  // Summary
+  const sumEl=document.getElementById('lateSummary');
+  if(lateLog.length){
+    const totFine=lateLog.reduce((s,e)=>s+e.fine,0);
+    const counts={};
+    lateLog.forEach(e=>{ counts[e.mem]=(counts[e.mem]||0)+1; });
+    const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+    sumEl.innerHTML=`<div class="panel" style="margin:0"><div style="padding:12px 14px;font-size:.8rem;">
+      <span style="color:var(--sub);">Total late entries: </span><strong>${lateLog.length}</strong> &nbsp;|&nbsp;
+      <span style="color:var(--sub);">Total fines: </span><strong style="color:var(--red)">${fmt(totFine)}</strong>
+      ${top?`&nbsp;|&nbsp;<span style="color:var(--sub);">Most late: </span><strong>${top[0]} (${top[1]}×)</strong>`:''}
+    </div></div>`;
+  } else sumEl.innerHTML='';
+
+  // Sidebar this-month summary
+  const curMonth=new Intl.DateTimeFormat('en',{month:'long'}).format(new Date());
+  const thisMonth=lateLog.filter(e=>e.month===curMonth);
+  const sideEl=document.getElementById('sidebarLate');
+  if(!thisMonth.length){ sideEl.innerHTML='<p style="color:var(--sub);font-size:.78rem;">No late entries this month.</p>'; }
+  else{
+    const byMem={};
+    thisMonth.forEach(e=>{ byMem[e.mem]=(byMem[e.mem]||0)+1; });
+    sideEl.innerHTML=Object.entries(byMem).map(([n,c])=>`
+      <div style="display:flex;justify-content:space-between;font-size:.8rem;padding:6px 0;border-bottom:1px solid var(--border);">
+        <span>${n}</span><span style="color:var(--red);font-weight:700;">${c}× late</span>
+      </div>`).join('');
+  }
+}
+
+// ── Holder ──
+function renderHolder(){
+  const bal=holder.collected-holder.spent;
+  document.getElementById('holderName').textContent=holder.name;
+  document.getElementById('holderBalance').textContent=fmt(bal<0?0:bal);
+  document.getElementById('holderCollected').textContent=fmt(holder.collected);
+  document.getElementById('holderSpent').textContent=fmt(holder.spent);
+}
+
+function recordSpend(){
+  const amt=parseFloat(document.getElementById('spend-amount').value);
+  const desc=document.getElementById('spend-desc').value;
+  if(!amt){ showToast('Enter an amount','error'); return; }
+  holder.spent+=amt;
+  payments.push({type:'event',title:`Spending: ${desc||'(no description)'}`,sub:`Holder: ${holder.name} · ${today()}`,amount:amt,date:today()});
+  save(); renderHolder(); renderPayments();
+  addLog('event',`Spend ${fmt(amt)} by ${holder.name}`,today(),desc);
+  showToast(`💸 Spending of ${fmt(amt)} recorded`);
+  document.getElementById('spend-amount').value='';
+  document.getElementById('spend-desc').value='';
+}
+
+function changeHolder(){
+  const n=document.getElementById('new-holder').value.trim();
+  if(!n){ showToast('Enter holder name','error'); return; }
+  holder.name=n; save(); renderHolder();
+  showToast(`🔄 Fund holder updated to ${n}`);
+  document.getElementById('new-holder').value='';
+}
+
+// ── Clear Forms ──
+function clearForm(type){
+  const map={fine:['f-member','f-amount','f-cat','f-note'],payment:['p-member','p-amount','p-holder','p-note'],event:['e-name','e-cost','e-desc'],adjust:['a-member','a-amount','a-reason']};
+  (map[type]||[]).forEach(id=>{ const e=document.getElementById(id); if(e)e.value=''; });
+}
+
+// ── Panel toggle ──
+function togglePanel(){
+  const b=document.getElementById('panelBody');
+  const a=document.getElementById('panelArrow');
+  if(b.classList.contains('open')){ b.classList.remove('open'); a.textContent='▼'; }
+  else{ b.classList.add('open'); a.textContent='▲'; }
+}
+
+// ── Tab switching (main) ──
+function switchTab(name,btn){
+  ['balance','payments','rules','late','policies'].forEach(t=>{ document.getElementById('tab-'+t).style.display='none'; });
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).style.display='block';
+  btn.classList.add('active');
+  if(name==='payments') renderPayments();
+  if(name==='late') renderLateLog();
+}
+
+// ── Input tab switching ──
+function switchInputTab(name,btn){
+  document.querySelectorAll('.form-section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.input-tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('fs-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Render all ──
+function renderAll(){
+  renderStats(); renderTicker(); renderBalance(); renderHolder(); renderLog();
+}
+
+// ── INIT ──
+(function init(){
+  populateSelects();
+  initDate('f-date'); initDate('p-date'); initDate('e-date'); initDate('a-date');
+  renderAll();
+  renderLateLog();
+})();
+</script>
+</body>
+</html>
